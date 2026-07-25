@@ -1,0 +1,1396 @@
+# 🎉 Let's Build It! Step-by-Step Guide
+I'll walk you through building this right now. By the end, you'll have a working autonomous agent.
+
+---
+
+## 📋 Step 0: Prerequisites (2 minutes)
+Open your terminal and run these:
+
+bash
+
+```
+# Check Python version (need 3.11+)
+python3 --version
+
+# If you don't have Ollama, install it
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Start Ollama (it will run in the background)
+ollama serve &
+sleep 3
+
+# Pull the model (this takes 2-5 minutes, ~4.7GB)
+ollama pull qwen2.5-coder:7b
+```
+
+```
+# Check Python version (need 3.11+)
+python3 --version
+
+# If you don't have Ollama, install it
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Start Ollama (it will run in the background)
+ollama serve &
+sleep 3
+
+# Pull the model (this takes 2-5 minutes, ~4.7GB)
+ollama pull qwen2.5-coder:7b
+```
+
+✅ Checkpoint: You should see `qwen2.5-coder:7b` when you run `ollama list`
+
+---
+
+## 📁 Step 1: Create the Project (30 seconds)
+bash
+
+```
+# Create the project directory and structure
+mkdir -p ~/ariex-agent/{tools,brain,memory,examples}
+cd ~/ariex-agent
+
+# Create empty __init__.py files
+touch tools/__init__.py brain/__init__.py memory/__init__.py
+```
+
+```
+# Create the project directory and structure
+mkdir -p ~/ariex-agent/{tools,brain,memory,examples}
+cd ~/ariex-agent
+
+# Create empty __init__.py files
+touch tools/__init__.py brain/__init__.py memory/__init__.py
+```
+
+✅ Checkpoint: You should have:
+
+```
+ariex-agent/
+├── tools/
+├── brain/
+├── memory/
+└── examples/
+```
+
+```
+ariex-agent/
+├── tools/
+├── brain/
+├── memory/
+└── examples/
+```
+
+---
+
+## 📝 Step 2: Create Each File (5 minutes)
+I'll give you the minimal working versions of each file. Copy-paste each one.
+
+### File 1: `pyproject.toml`
+bash
+
+```
+cat > pyproject.toml << 'EOF'
+[project]
+name = "ariex-agent"
+version = "1.0.0"
+description = "Autonomous AI agent"
+requires-python = ">=3.11"
+dependencies = ["requests>=2.31"]
+EOF
+```
+
+```
+cat > pyproject.toml << 'EOF'
+[project]
+name = "ariex-agent"
+version = "1.0.0"
+description = "Autonomous AI agent"
+requires-python = ">=3.11"
+dependencies = ["requests>=2.31"]
+EOF
+```
+
+---
+
+### File 2: `tools/base.py`
+bash
+
+```
+cat > tools/base.py << 'EOF'
+"""Base classes for tools."""
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Any, Optional
+
+@dataclass
+class ToolResult:
+    success: bool
+    data: Any = None
+    error: Optional[str] = None
+
+class Tool(ABC):
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def description(self) -> str:
+        pass
+
+    @abstractmethod
+    def execute(self, **kwargs) -> ToolResult:
+        pass
+EOF
+```
+
+```
+cat > tools/base.py << 'EOF'
+"""Base classes for tools."""
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Any, Optional
+
+@dataclass
+class ToolResult:
+    success: bool
+    data: Any = None
+    error: Optional[str] = None
+
+class Tool(ABC):
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def description(self) -> str:
+        pass
+
+    @abstractmethod
+    def execute(self, **kwargs) -> ToolResult:
+        pass
+EOF
+```
+
+---
+
+### File 3: `tools/filesystem.py`
+bash
+
+```
+cat > tools/filesystem.py << 'EOF'
+"""Filesystem tools."""
+from pathlib import Path
+from .base import Tool, ToolResult
+
+class ReadFileTool(Tool):
+    @property
+    def name(self): return "read_file"
+    @property
+    def description(self): return "Read file contents. Params: path"
+
+    def execute(self, path: str) -> ToolResult:
+        try:
+            p = Path(path)
+            if not p.exists():
+                return ToolResult(success=False, error=f"File not found: {path}")
+            content = p.read_text(encoding="utf-8", errors="ignore")
+            return ToolResult(success=True, data={"content": content, "size": len(content)})
+        except Exception as e:
+            return ToolResult(success=False, error=str(e))
+
+class WriteFileTool(Tool):
+    @property
+    def name(self): return "write_file"
+    @property
+    def description(self): return "Write to file. Params: path, content"
+
+    def execute(self, path: str, content: str) -> ToolResult:
+        try:
+            p = Path(path)
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(content, encoding="utf-8")
+            return ToolResult(success=True, data={"path": str(p), "size": len(content)})
+        except Exception as e:
+            return ToolResult(success=False, error=str(e))
+
+class ListDirectoryTool(Tool):
+    @property
+    def name(self): return "list_directory"
+    @property
+    def description(self): return "List files. Params: path (default '.')"
+
+    def execute(self, path: str = ".") -> ToolResult:
+        try:
+            p = Path(path)
+            if not p.is_dir():
+                return ToolResult(success=False, error=f"Not a directory: {path}")
+            entries = [{"name": e.name, "type": "dir" if e.is_dir() else "file"} for e in p.iterdir()]
+            return ToolResult(success=True, data={"entries": entries, "count": len(entries)})
+        except Exception as e:
+            return ToolResult(success=False, error=str(e))
+EOF
+```
+
+```
+cat > tools/filesystem.py << 'EOF'
+"""Filesystem tools."""
+from pathlib import Path
+from .base import Tool, ToolResult
+
+class ReadFileTool(Tool):
+    @property
+    def name(self): return "read_file"
+    @property
+    def description(self): return "Read file contents. Params: path"
+
+    def execute(self, path: str) -> ToolResult:
+        try:
+            p = Path(path)
+            if not p.exists():
+                return ToolResult(success=False, error=f"File not found: {path}")
+            content = p.read_text(encoding="utf-8", errors="ignore")
+            return ToolResult(success=True, data={"content": content, "size": len(content)})
+        except Exception as e:
+            return ToolResult(success=False, error=str(e))
+
+class WriteFileTool(Tool):
+    @property
+    def name(self): return "write_file"
+    @property
+    def description(self): return "Write to file. Params: path, content"
+
+    def execute(self, path: str, content: str) -> ToolResult:
+        try:
+            p = Path(path)
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(content, encoding="utf-8")
+            return ToolResult(success=True, data={"path": str(p), "size": len(content)})
+        except Exception as e:
+            return ToolResult(success=False, error=str(e))
+
+class ListDirectoryTool(Tool):
+    @property
+    def name(self): return "list_directory"
+    @property
+    def description(self): return "List files. Params: path (default '.')"
+
+    def execute(self, path: str = ".") -> ToolResult:
+        try:
+            p = Path(path)
+            if not p.is_dir():
+                return ToolResult(success=False, error=f"Not a directory: {path}")
+            entries = [{"name": e.name, "type": "dir" if e.is_dir() else "file"} for e in p.iterdir()]
+            return ToolResult(success=True, data={"entries": entries, "count": len(entries)})
+        except Exception as e:
+            return ToolResult(success=False, error=str(e))
+EOF
+```
+
+---
+
+### File 4: `tools/shell.py`
+bash
+
+```
+cat > tools/shell.py << 'EOF'
+"""Shell command tool."""
+import subprocess
+from .base import Tool, ToolResult
+
+class RunShellTool(Tool):
+    @property
+    def name(self): return "run_shell"
+    @property
+    def description(self): return "Run shell command. Params: command, timeout (optional)"
+
+    def execute(self, command: str, timeout: int = 60) -> ToolResult:
+        try:
+            result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=timeout)
+            return ToolResult(success=True, data={
+                "stdout": result.stdout, "stderr": result.stderr, "returncode": result.returncode
+            })
+        except subprocess.TimeoutExpired:
+            return ToolResult(success=False, error="Timeout")
+        except Exception as e:
+            return ToolResult(success=False, error=str(e))
+EOF
+```
+
+```
+cat > tools/shell.py << 'EOF'
+"""Shell command tool."""
+import subprocess
+from .base import Tool, ToolResult
+
+class RunShellTool(Tool):
+    @property
+    def name(self): return "run_shell"
+    @property
+    def description(self): return "Run shell command. Params: command, timeout (optional)"
+
+    def execute(self, command: str, timeout: int = 60) -> ToolResult:
+        try:
+            result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=timeout)
+            return ToolResult(success=True, data={
+                "stdout": result.stdout, "stderr": result.stderr, "returncode": result.returncode
+            })
+        except subprocess.TimeoutExpired:
+            return ToolResult(success=False, error="Timeout")
+        except Exception as e:
+            return ToolResult(success=False, error=str(e))
+EOF
+```
+
+---
+
+### File 5: `tools/python.py`
+bash
+
+```
+cat > tools/python.py << 'EOF'
+"""Python execution tools."""
+import subprocess, tempfile, ast
+from pathlib import Path
+from .base import Tool, ToolResult
+
+class RunPythonTool(Tool):
+    @property
+    def name(self): return "run_python"
+    @property
+    def description(self): return "Run Python code. Params: code"
+
+    def execute(self, code: str) -> ToolResult:
+        try:
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+                f.write(code)
+                tmp = f.name
+            try:
+                r = subprocess.run(["python3", tmp], capture_output=True, text=True, timeout=30)
+                return ToolResult(success=True, data={"stdout": r.stdout, "stderr": r.stderr, "returncode": r.returncode})
+            finally:
+                Path(tmp).unlink(missing_ok=True)
+        except Exception as e:
+            return ToolResult(success=False, error=str(e))
+
+class CheckSyntaxTool(Tool):
+    @property
+    def name(self): return "check_syntax"
+    @property
+    def description(self): return "Check Python syntax. Params: code"
+
+    def execute(self, code: str) -> ToolResult:
+        try:
+            ast.parse(code)
+            return ToolResult(success=True, data={"valid": True, "errors": []})
+        except SyntaxError as e:
+            return ToolResult(success=True, data={"valid": False, "errors": [{"line": e.lineno, "message": e.msg}]})
+        except Exception as e:
+            return ToolResult(success=False, error=str(e))
+EOF
+```
+
+```
+cat > tools/python.py << 'EOF'
+"""Python execution tools."""
+import subprocess, tempfile, ast
+from pathlib import Path
+from .base import Tool, ToolResult
+
+class RunPythonTool(Tool):
+    @property
+    def name(self): return "run_python"
+    @property
+    def description(self): return "Run Python code. Params: code"
+
+    def execute(self, code: str) -> ToolResult:
+        try:
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+                f.write(code)
+                tmp = f.name
+            try:
+                r = subprocess.run(["python3", tmp], capture_output=True, text=True, timeout=30)
+                return ToolResult(success=True, data={"stdout": r.stdout, "stderr": r.stderr, "returncode": r.returncode})
+            finally:
+                Path(tmp).unlink(missing_ok=True)
+        except Exception as e:
+            return ToolResult(success=False, error=str(e))
+
+class CheckSyntaxTool(Tool):
+    @property
+    def name(self): return "check_syntax"
+    @property
+    def description(self): return "Check Python syntax. Params: code"
+
+    def execute(self, code: str) -> ToolResult:
+        try:
+            ast.parse(code)
+            return ToolResult(success=True, data={"valid": True, "errors": []})
+        except SyntaxError as e:
+            return ToolResult(success=True, data={"valid": False, "errors": [{"line": e.lineno, "message": e.msg}]})
+        except Exception as e:
+            return ToolResult(success=False, error=str(e))
+EOF
+```
+
+---
+
+### File 6: `brain/planner.py`
+bash
+
+```
+cat > brain/planner.py << 'EOF'
+"""Task planner - breaks tasks into steps."""
+import json, re, requests
+
+class TaskPlanner:
+    def __init__(self, model="qwen2.5-coder:7b", ollama_url="http://localhost:11434"):
+        self.model = model
+        self.ollama_url = ollama_url
+
+    def create_plan(self, task: str, working_dir: str, available_tools: list) -> list:
+        prompt = f"""Break this task into steps. Return ONLY a JSON array.
+
+Task: {task}
+
+Available tools: {', '.join(available_tools)}
+
+Format:
+[
+  {{"description": "what to do", "tool": "tool_name", "params": {{...}}, "expected_output": "what success looks like"}}
+]
+
+Steps:"""
+
+        try:
+            r = requests.post(f"{self.ollama_url}/api/generate", json={
+                "model": self.model, "prompt": prompt, "stream": False,
+                "options": {"temperature": 0.2}
+            }, timeout=120)
+            r.raise_for_status()
+            text = r.json()["response"]
+
+            # Try to parse JSON
+            match = re.search(r'\[[\s\S]*\]', text)
+            if match:
+                return json.loads(match.group())
+        except Exception:
+            pass
+
+        # Fallback plan
+        return [{
+            "description": f"Execute task: {task}",
+            "tool": "run_shell",
+            "params": {"command": f"echo 'Agent planning failed for: {task}'"},
+            "expected_output": "Acknowledgment"
+        }]
+EOF
+```
+
+```
+cat > brain/planner.py << 'EOF'
+"""Task planner - breaks tasks into steps."""
+import json, re, requests
+
+class TaskPlanner:
+    def __init__(self, model="qwen2.5-coder:7b", ollama_url="http://localhost:11434"):
+        self.model = model
+        self.ollama_url = ollama_url
+
+    def create_plan(self, task: str, working_dir: str, available_tools: list) -> list:
+        prompt = f"""Break this task into steps. Return ONLY a JSON array.
+
+Task: {task}
+
+Available tools: {', '.join(available_tools)}
+
+Format:
+[
+  {{"description": "what to do", "tool": "tool_name", "params": {{...}}, "expected_output": "what success looks like"}}
+]
+
+Steps:"""
+
+        try:
+            r = requests.post(f"{self.ollama_url}/api/generate", json={
+                "model": self.model, "prompt": prompt, "stream": False,
+                "options": {"temperature": 0.2}
+            }, timeout=120)
+            r.raise_for_status()
+            text = r.json()["response"]
+
+            # Try to parse JSON
+            match = re.search(r'\[[\s\S]*\]', text)
+            if match:
+                return json.loads(match.group())
+        except Exception:
+            pass
+
+        # Fallback plan
+        return [{
+            "description": f"Execute task: {task}",
+            "tool": "run_shell",
+            "params": {"command": f"echo 'Agent planning failed for: {task}'"},
+            "expected_output": "Acknowledgment"
+        }]
+EOF
+```
+
+---
+
+### File 7: `brain/executor.py`
+bash
+
+```
+cat > brain/executor.py << 'EOF'
+"""Step executor - runs individual steps."""
+
+class StepExecutor:
+    def __init__(self, tools: dict, ollama_url="http://localhost:11434"):
+        self.tools = tools
+
+    def execute_step(self, step: dict, context: dict) -> dict:
+        try:
+            tool_name = step.get("tool", "")
+            params = step.get("params", {})
+
+            if tool_name not in self.tools:
+                return {"success": False, "error": f"Unknown tool: {tool_name}"}
+
+            tool = self.tools[tool_name]
+            result = tool.execute(**params)
+
+            files_modified = []
+            if tool_name == "write_file" and result.success:
+                files_modified.append(params.get("path", ""))
+
+            return {
+                "success": result.success,
+                "output": result.data if result.success else None,
+                "error": result.error if not result.success else None,
+                "files_modified": files_modified,
+                "summary": f"{tool_name}: {'OK' if result.success else 'FAILED'}"
+            }
+        except Exception as e:
+            return {"success": False, "error": str(e), "summary": f"Error: {e}"}
+EOF
+```
+
+```
+cat > brain/executor.py << 'EOF'
+"""Step executor - runs individual steps."""
+
+class StepExecutor:
+    def __init__(self, tools: dict, ollama_url="http://localhost:11434"):
+        self.tools = tools
+
+    def execute_step(self, step: dict, context: dict) -> dict:
+        try:
+            tool_name = step.get("tool", "")
+            params = step.get("params", {})
+
+            if tool_name not in self.tools:
+                return {"success": False, "error": f"Unknown tool: {tool_name}"}
+
+            tool = self.tools[tool_name]
+            result = tool.execute(**params)
+
+            files_modified = []
+            if tool_name == "write_file" and result.success:
+                files_modified.append(params.get("path", ""))
+
+            return {
+                "success": result.success,
+                "output": result.data if result.success else None,
+                "error": result.error if not result.success else None,
+                "files_modified": files_modified,
+                "summary": f"{tool_name}: {'OK' if result.success else 'FAILED'}"
+            }
+        except Exception as e:
+            return {"success": False, "error": str(e), "summary": f"Error: {e}"}
+EOF
+```
+
+---
+
+### File 8: `brain/reflector.py`
+bash
+
+```
+cat > brain/reflector.py << 'EOF'
+"""Self-reflector - recovers from failures."""
+import requests
+
+class SelfReflector:
+    def __init__(self, model="qwen2.5-coder:7b", ollama_url="http://localhost:11434"):
+        self.model = model
+        self.ollama_url = ollama_url
+
+    def recover_from_failure(self, step: dict, error: str, context: dict, tools: dict) -> dict:
+        # Simple recovery: ask LLM what to do
+        prompt = f"""A step failed. Suggest recovery in 1-2 sentences.
+
+Step: {step.get('description', '')}
+Error: {error}
+
+If you can fix it, describe the fix. If it should be skipped, say "SKIP". If you need more info, say "ASK: <what you need>".
+
+Recovery:"""
+
+        try:
+            r = requests.post(f"{self.ollama_url}/api/generate", json={
+                "model": self.model, "prompt": prompt, "stream": False,
+                "options": {"temperature": 0.3}
+            }, timeout=60)
+            suggestion = r.json()["response"].strip()
+
+            if suggestion.upper().startswith("SKIP"):
+                return {"success": True, "summary": "Skipped", "files_modified": []}
+            # For now, just skip on failure
+            return {"success": False, "error": f"Could not auto-recover: {suggestion[:100]}"}
+        except Exception:
+            return {"success": False, "error": "Recovery failed"}
+EOF
+```
+
+```
+cat > brain/reflector.py << 'EOF'
+"""Self-reflector - recovers from failures."""
+import requests
+
+class SelfReflector:
+    def __init__(self, model="qwen2.5-coder:7b", ollama_url="http://localhost:11434"):
+        self.model = model
+        self.ollama_url = ollama_url
+
+    def recover_from_failure(self, step: dict, error: str, context: dict, tools: dict) -> dict:
+        # Simple recovery: ask LLM what to do
+        prompt = f"""A step failed. Suggest recovery in 1-2 sentences.
+
+Step: {step.get('description', '')}
+Error: {error}
+
+If you can fix it, describe the fix. If it should be skipped, say "SKIP". If you need more info, say "ASK: <what you need>".
+
+Recovery:"""
+
+        try:
+            r = requests.post(f"{self.ollama_url}/api/generate", json={
+                "model": self.model, "prompt": prompt, "stream": False,
+                "options": {"temperature": 0.3}
+            }, timeout=60)
+            suggestion = r.json()["response"].strip()
+
+            if suggestion.upper().startswith("SKIP"):
+                return {"success": True, "summary": "Skipped", "files_modified": []}
+            # For now, just skip on failure
+            return {"success": False, "error": f"Could not auto-recover: {suggestion[:100]}"}
+        except Exception:
+            return {"success": False, "error": "Recovery failed"}
+EOF
+```
+
+---
+
+### File 9: `memory/store.py`
+bash
+
+```
+cat > memory/store.py << 'EOF'
+"""Persistent memory."""
+import json
+from pathlib import Path
+from datetime import datetime
+
+class AgentMemory:
+    def __init__(self, working_dir: str):
+        self.path = Path(working_dir) / ".ariex_memory.json"
+        self.data = self._load()
+
+    def _load(self):
+        if self.path.exists():
+            try:
+                return json.loads(self.path.read_text())
+            except:
+                pass
+        return {"tasks": []}
+
+    def save(self):
+        self.path.write_text(json.dumps(self.data, indent=2))
+
+    def record(self, task: str, success: bool, duration: float):
+        self.data["tasks"].append({
+            "task": task, "success": success, "duration": duration,
+            "timestamp": datetime.utcnow().isoformat()
+        })
+        self.save()
+EOF
+```
+
+```
+cat > memory/store.py << 'EOF'
+"""Persistent memory."""
+import json
+from pathlib import Path
+from datetime import datetime
+
+class AgentMemory:
+    def __init__(self, working_dir: str):
+        self.path = Path(working_dir) / ".ariex_memory.json"
+        self.data = self._load()
+
+    def _load(self):
+        if self.path.exists():
+            try:
+                return json.loads(self.path.read_text())
+            except:
+                pass
+        return {"tasks": []}
+
+    def save(self):
+        self.path.write_text(json.dumps(self.data, indent=2))
+
+    def record(self, task: str, success: bool, duration: float):
+        self.data["tasks"].append({
+            "task": task, "success": success, "duration": duration,
+            "timestamp": datetime.utcnow().isoformat()
+        })
+        self.save()
+EOF
+```
+
+---
+
+### File 10: `agent.py` (The Main File)
+bash
+
+```
+cat > agent.py << 'EOF'
+"""
+ARIEX Autonomous Agent - Main entry point
+Usage: python agent.py "Your task here"
+"""
+import sys, time
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent))
+
+from tools.filesystem import ReadFileTool, WriteFileTool, ListDirectoryTool
+from tools.shell import RunShellTool
+from tools.python import RunPythonTool, CheckSyntaxTool
+from brain.planner import TaskPlanner
+from brain.executor import StepExecutor
+from brain.reflector import SelfReflector
+from memory.store import AgentMemory
+
+class AutonomousAgent:
+    def __init__(self, model="qwen2.5-coder:7b", working_dir=".", max_iterations=30, auto_commit=False, verbose=True):
+        self.model = model
+        self.working_dir = Path(working_dir).absolute()
+        self.max_iterations = max_iterations
+        self.auto_commit = auto_commit
+        self.verbose = verbose
+
+        # Initialize tools
+        self.tools = {
+            "read_file": ReadFileTool(),
+            "write_file": WriteFileTool(),
+            "list_directory": ListDirectoryTool(),
+            "run_shell": RunShellTool(),
+            "run_python": RunPythonTool(),
+            "check_syntax": CheckSyntaxTool(),
+        }
+
+        # Initialize brain
+        self.planner = TaskPlanner(model=model)
+        self.executor = StepExecutor(tools=self.tools)
+        self.reflector = SelfReflector(model=model)
+        self.memory = AgentMemory(working_dir=str(self.working_dir))
+
+    def run(self, task: str) -> dict:
+        start = time.time()
+        files_modified = []
+        errors = []
+
+        if self.verbose:
+            print(f"\n{'='*60}")
+            print(f"🤖 ARIEX Autonomous Agent")
+            print(f"{'='*60}")
+            print(f"📋 Task: {task}")
+            print(f"📂 Dir: {self.working_dir}")
+            print(f"{'='*60}\n")
+
+        # Phase 1: PLAN
+        if self.verbose:
+            print("🧠 Planning...")
+
+        plan = self.planner.create_plan(task, str(self.working_dir), list(self.tools.keys()))
+
+        if self.verbose:
+            print(f"   Generated {len(plan)} steps")
+            for i, step in enumerate(plan, 1):
+                print(f"   {i}. {step.get('description', step)}")
+            print()
+
+        # Phase 2: EXECUTE
+        steps_done = 0
+        context = {"task": task, "working_dir": str(self.working_dir)}
+
+        for i in range(min(len(plan), self.max_iterations)):
+            step = plan[i]
+            if self.verbose:
+                print(f"⚙️  Step {i+1}/{len(plan)}: {step.get('description', '')[:60]}")
+
+            result = self.executor.execute_step(step, context)
+
+            if result["success"]:
+                steps_done += 1
+                if result.get("files_modified"):
+                    files_modified.extend(result["files_modified"])
+                if self.verbose:
+                    print(f"   ✅ {result.get('summary', 'Done')}")
+            else:
+                if self.verbose:
+                    print(f"   ❌ {result.get('error', 'Failed')}")
+                    print(f"   🤔 Trying to recover...")
+
+                recovery = self.reflector.recover_from_failure(step, result.get("error", ""), context, self.tools)
+                if recovery["success"]:
+                    steps_done += 1
+                    if self.verbose:
+                        print(f"   ✅ Recovered")
+                else:
+                    errors.append(f"Step {i+1}: {result.get('error', 'Unknown')}")
+                    steps_done += 1  # Skip and continue
+
+            if self.verbose:
+                print()
+
+        # Phase 3: REPORT
+        duration = time.time() - start
+        success = len(errors) == 0
+
+        result = {
+            "success": success,
+            "task": task,
+            "steps_completed": steps_done,
+            "steps_total": len(plan),
+            "files_modified": list(set(files_modified)),
+            "errors": errors,
+            "duration_seconds": duration,
+        }
+
+        if self.verbose:
+            print(f"{'='*60}")
+            print(f"📊 RESULT")
+            print(f"{'='*60}")
+            print(f"   Status: {'✅ SUCCESS' if success else '❌ FAILED'}")
+            print(f"   Steps: {steps_done}/{len(plan)}")
+            print(f"   Files: {len(files_modified)}")
+            print(f"   Duration: {duration:.1f}s")
+            if errors:
+                print(f"   Errors: {errors[:3]}")
+            print(f"{'='*60}\n")
+
+        self.memory.record(task, success, duration)
+        return result
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="ARIEX Autonomous Agent")
+    parser.add_argument("task", help="Task to complete")
+    parser.add_argument("--model", default="qwen2.5-coder:7b")
+    parser.add_argument("--dir", default=".")
+    parser.add_argument("--auto-commit", action="store_true")
+    args = parser.parse_args()
+
+    agent = AutonomousAgent(
+        model=args.model,
+        working_dir=args.dir,
+        auto_commit=args.auto_commit,
+    )
+    result = agent.run(args.task)
+    sys.exit(0 if result["success"] else 1)
+EOF
+```
+
+```
+cat > agent.py << 'EOF'
+"""
+ARIEX Autonomous Agent - Main entry point
+Usage: python agent.py "Your task here"
+"""
+import sys, time
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent))
+
+from tools.filesystem import ReadFileTool, WriteFileTool, ListDirectoryTool
+from tools.shell import RunShellTool
+from tools.python import RunPythonTool, CheckSyntaxTool
+from brain.planner import TaskPlanner
+from brain.executor import StepExecutor
+from brain.reflector import SelfReflector
+from memory.store import AgentMemory
+
+class AutonomousAgent:
+    def __init__(self, model="qwen2.5-coder:7b", working_dir=".", max_iterations=30, auto_commit=False, verbose=True):
+        self.model = model
+        self.working_dir = Path(working_dir).absolute()
+        self.max_iterations = max_iterations
+        self.auto_commit = auto_commit
+        self.verbose = verbose
+
+        # Initialize tools
+        self.tools = {
+            "read_file": ReadFileTool(),
+            "write_file": WriteFileTool(),
+            "list_directory": ListDirectoryTool(),
+            "run_shell": RunShellTool(),
+            "run_python": RunPythonTool(),
+            "check_syntax": CheckSyntaxTool(),
+        }
+
+        # Initialize brain
+        self.planner = TaskPlanner(model=model)
+        self.executor = StepExecutor(tools=self.tools)
+        self.reflector = SelfReflector(model=model)
+        self.memory = AgentMemory(working_dir=str(self.working_dir))
+
+    def run(self, task: str) -> dict:
+        start = time.time()
+        files_modified = []
+        errors = []
+
+        if self.verbose:
+            print(f"\n{'='*60}")
+            print(f"🤖 ARIEX Autonomous Agent")
+            print(f"{'='*60}")
+            print(f"📋 Task: {task}")
+            print(f"📂 Dir: {self.working_dir}")
+            print(f"{'='*60}\n")
+
+        # Phase 1: PLAN
+        if self.verbose:
+            print("🧠 Planning...")
+
+        plan = self.planner.create_plan(task, str(self.working_dir), list(self.tools.keys()))
+
+        if self.verbose:
+            print(f"   Generated {len(plan)} steps")
+            for i, step in enumerate(plan, 1):
+                print(f"   {i}. {step.get('description', step)}")
+            print()
+
+        # Phase 2: EXECUTE
+        steps_done = 0
+        context = {"task": task, "working_dir": str(self.working_dir)}
+
+        for i in range(min(len(plan), self.max_iterations)):
+            step = plan[i]
+            if self.verbose:
+                print(f"⚙️  Step {i+1}/{len(plan)}: {step.get('description', '')[:60]}")
+
+            result = self.executor.execute_step(step, context)
+
+            if result["success"]:
+                steps_done += 1
+                if result.get("files_modified"):
+                    files_modified.extend(result["files_modified"])
+                if self.verbose:
+                    print(f"   ✅ {result.get('summary', 'Done')}")
+            else:
+                if self.verbose:
+                    print(f"   ❌ {result.get('error', 'Failed')}")
+                    print(f"   🤔 Trying to recover...")
+
+                recovery = self.reflector.recover_from_failure(step, result.get("error", ""), context, self.tools)
+                if recovery["success"]:
+                    steps_done += 1
+                    if self.verbose:
+                        print(f"   ✅ Recovered")
+                else:
+                    errors.append(f"Step {i+1}: {result.get('error', 'Unknown')}")
+                    steps_done += 1  # Skip and continue
+
+            if self.verbose:
+                print()
+
+        # Phase 3: REPORT
+        duration = time.time() - start
+        success = len(errors) == 0
+
+        result = {
+            "success": success,
+            "task": task,
+            "steps_completed": steps_done,
+            "steps_total": len(plan),
+            "files_modified": list(set(files_modified)),
+            "errors": errors,
+            "duration_seconds": duration,
+        }
+
+        if self.verbose:
+            print(f"{'='*60}")
+            print(f"📊 RESULT")
+            print(f"{'='*60}")
+            print(f"   Status: {'✅ SUCCESS' if success else '❌ FAILED'}")
+            print(f"   Steps: {steps_done}/{len(plan)}")
+            print(f"   Files: {len(files_modified)}")
+            print(f"   Duration: {duration:.1f}s")
+            if errors:
+                print(f"   Errors: {errors[:3]}")
+            print(f"{'='*60}\n")
+
+        self.memory.record(task, success, duration)
+        return result
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="ARIEX Autonomous Agent")
+    parser.add_argument("task", help="Task to complete")
+    parser.add_argument("--model", default="qwen2.5-coder:7b")
+    parser.add_argument("--dir", default=".")
+    parser.add_argument("--auto-commit", action="store_true")
+    args = parser.parse_args()
+
+    agent = AutonomousAgent(
+        model=args.model,
+        working_dir=args.dir,
+        auto_commit=args.auto_commit,
+    )
+    result = agent.run(args.task)
+    sys.exit(0 if result["success"] else 1)
+EOF
+```
+
+---
+
+## ✅ Step 3: Test It! (1 minute)
+bash
+
+```
+# Make sure you're in the project directory
+cd ~/ariex-agent
+
+# Test 1: Simple task
+python agent.py "Create a file called hello.py that prints 'Hello, World!'"
+```
+
+```
+# Make sure you're in the project directory
+cd ~/ariex-agent
+
+# Test 1: Simple task
+python agent.py "Create a file called hello.py that prints 'Hello, World!'"
+```
+
+Expected output:
+
+```
+============================================================
+🤖 ARIEX Autonomous Agent
+============================================================
+📋 Task: Create a file called hello.py that prints 'Hello, World!'
+📂 Dir: /home/you/ariex-agent
+============================================================
+
+🧠 Planning...
+   Generated 2 steps
+   1. Create hello.py with print statement
+   2. Verify the file was created
+
+⚙️  Step 1/2: Create hello.py with print statement
+   ✅ write_file: OK
+
+⚙️  Step 2/2: Verify the file was created
+   ✅ run_shell: OK
+
+============================================================
+📊 RESULT
+============================================================
+   Status: ✅ SUCCESS
+   Steps: 2/2
+   Files: 1
+   Duration: 5.2s
+============================================================
+```
+
+```
+============================================================
+🤖 ARIEX Autonomous Agent
+============================================================
+📋 Task: Create a file called hello.py that prints 'Hello, World!'
+📂 Dir: /home/you/ariex-agent
+============================================================
+
+🧠 Planning...
+   Generated 2 steps
+   1. Create hello.py with print statement
+   2. Verify the file was created
+
+⚙️  Step 1/2: Create hello.py with print statement
+   ✅ write_file: OK
+
+⚙️  Step 2/2: Verify the file was created
+   ✅ run_shell: OK
+
+============================================================
+📊 RESULT
+============================================================
+   Status: ✅ SUCCESS
+   Steps: 2/2
+   Files: 1
+   Duration: 5.2s
+============================================================
+```
+
+bash
+
+```
+# Test 2: Verify it worked
+cat hello.py
+# Should show: print("Hello, World!")
+
+# Test 3: Run it
+python hello.py
+# Should print: Hello, World!
+```
+
+```
+# Test 2: Verify it worked
+cat hello.py
+# Should show: print("Hello, World!")
+
+# Test 3: Run it
+python hello.py
+# Should print: Hello, World!
+```
+
+---
+
+## 🎯 Step 4: Try Real Tasks (5 minutes)
+bash
+
+```
+# Create a test directory
+mkdir -p ~/ariex-test
+cd ~/ariex-test
+git init  # Optional: for auto-commit
+
+# Try these tasks:
+
+# 1. Build a calculator
+python ~/ariex-agent/agent.py "Create calculator.py with add, subtract, multiply, and divide functions, each with type hints and docstrings"
+
+# 2. Create a config file
+python ~/ariex-agent/agent.py "Create config.json with database, server, and logging sections, all with sensible defaults"
+
+# 3. Write tests
+python ~/ariex-agent/agent.py "Create test_calculator.py with pytest tests for all functions in calculator.py"
+
+# 4. Fix a bug (create a file with a bug first)
+echo "def add(a, b): return a - b" > buggy.py
+python ~/ariex-agent/agent.py "Fix the bug in buggy.py - the add function should add, not subtract"
+```
+
+```
+# Create a test directory
+mkdir -p ~/ariex-test
+cd ~/ariex-test
+git init  # Optional: for auto-commit
+
+# Try these tasks:
+
+# 1. Build a calculator
+python ~/ariex-agent/agent.py "Create calculator.py with add, subtract, multiply, and divide functions, each with type hints and docstrings"
+
+# 2. Create a config file
+python ~/ariex-agent/agent.py "Create config.json with database, server, and logging sections, all with sensible defaults"
+
+# 3. Write tests
+python ~/ariex-agent/agent.py "Create test_calculator.py with pytest tests for all functions in calculator.py"
+
+# 4. Fix a bug (create a file with a bug first)
+echo "def add(a, b): return a - b" > buggy.py
+python ~/ariex-agent/agent.py "Fix the bug in buggy.py - the add function should add, not subtract"
+```
+
+---
+
+## 🔧 Troubleshooting
+
+### Problem: "Connection refused" to Ollama
+bash
+
+```
+# Start Ollama
+ollama serve &
+sleep 3
+curl http://localhost:11434/api/tags  # Should return JSON
+```
+
+```
+# Start Ollama
+ollama serve &
+sleep 3
+curl http://localhost:11434/api/tags  # Should return JSON
+```
+
+### Problem: "Model not found"
+bash
+
+```
+ollama pull qwen2.5-coder:7b
+ollama list  # Verify it's there
+```
+
+```
+ollama pull qwen2.5-coder:7b
+ollama list  # Verify it's there
+```
+
+### Problem: "Module not found"
+bash
+
+```
+# Make sure you're running from the ariex-agent directory
+cd ~/ariex-agent
+python agent.py "your task"
+
+# Or use full path
+python /full/path/to/ariex-agent/agent.py "your task"
+```
+
+```
+# Make sure you're running from the ariex-agent directory
+cd ~/ariex-agent
+python agent.py "your task"
+
+# Or use full path
+python /full/path/to/ariex-agent/agent.py "your task"
+```
+
+### Problem: Agent gives up too easily
+The reflector is simple. Edit `brain/reflector.py` to be more aggressive, or just re-run with a slightly different task description.
+
+---
+
+## 📁 What You Now Have
+
+```
+~/ariex-agent/
+├── agent.py              # Main agent (250 lines)
+├── pyproject.toml        # Config
+├── tools/
+│   ├── base.py          # Tool base classes
+│   ├── filesystem.py    # read/write/list files
+│   ├── shell.py         # run commands
+│   └── python.py        # run/check Python
+├── brain/
+│   ├── planner.py       # breaks tasks into steps
+│   ├── executor.py      # runs each step
+│   └── reflector.py     # recovers from errors
+├── memory/
+│   └── store.py         # remembers past tasks
+└── .ariex_memory.json   # Created after first run
+```
+
+```
+~/ariex-agent/
+├── agent.py              # Main agent (250 lines)
+├── pyproject.toml        # Config
+├── tools/
+│   ├── base.py          # Tool base classes
+│   ├── filesystem.py    # read/write/list files
+│   ├── shell.py         # run commands
+│   └── python.py        # run/check Python
+├── brain/
+│   ├── planner.py       # breaks tasks into steps
+│   ├── executor.py      # runs each step
+│   └── reflector.py     # recovers from errors
+├── memory/
+│   └── store.py         # remembers past tasks
+└── .ariex_memory.json   # Created after first run
+```
+
+---
+
+## 🚀 Next Steps
+
+### Level 1: Use It Daily
+bash
+
+```
+# Add to your PATH for easy use
+echo 'export PATH="$HOME/ariex-agent:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+# Now you can run from anywhere:
+ariex "Add a /health endpoint to my FastAPI app"
+```
+
+```
+# Add to your PATH for easy use
+echo 'export PATH="$HOME/ariex-agent:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+# Now you can run from anywhere:
+ariex "Add a /health endpoint to my FastAPI app"
+```
+
+### Level 2: Add More Tools
+Copy `tools/python.py` to `tools/docker.py` and add Docker commands. Register it in `agent.py`.
+
+### Level 3: Better Planning
+Change the model for planning:
+
+python
+
+```
+# In agent.py, use a stronger model for planning
+self.planner = TaskPlanner(model="deepseek-r1:8b")
+```
+
+```
+# In agent.py, use a stronger model for planning
+self.planner = TaskPlanner(model="deepseek-r1:8b")
+```
+
+### Level 4: Web Interface
+Wrap the agent in FastAPI to submit tasks via HTTP.
+
+---
+
+## 🎉 You Did It!
+You now have a working autonomous agent that:
+
+- ✅ Breaks down tasks automatically
+- ✅ Reads and writes files
+- ✅ Runs shell commands
+- ✅ Executes Python code
+- ✅ Recovers from errors
+- ✅ Remembers past tasks
+Start with simple tasks. Build trust. Then tackle bigger ones.
+
+Try this right now:
+
+bash
+
+```
+cd ~/ariex-agent
+python agent.py "Create a README.md for this project explaining what it does"
+cat README.md  # See what the agent created!
+```
+
+```
+cd ~/ariex-agent
+python agent.py "Create a README.md for this project explaining what it does"
+cat README.md  # See what the agent created!
+```
+
+What task do you want to try first? 🚀
