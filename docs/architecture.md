@@ -1,147 +1,156 @@
-# v9-Core System Architecture
+# ARIEX4OPS Architecture Blueprint
 
-## Overview
+## Status
 
-Arise GenOps v9-Core is a modular, event-driven platform that unifies AI automation, CAD engineering, and DevOps intelligence into a single cohesive ecosystem.
+This document is a **target-state blueprint**. The current repository does not contain the application services represented below. Do not interpret this diagram as proof of deployed or implemented services.
 
-## Design Principles
+## 1. Current observed architecture
 
-1. **Modularity** — Each package is independently versioned, tested, and deployable
-2. **Event-Driven** — Components communicate via async message bus (Redis/NATS)
-3. **AI-Native** — Every module exposes LLM-compatible APIs for agent orchestration
-4. **Observability** — OpenTelemetry tracing across all services
-5. **GitOps** — All infrastructure changes flow through Git
-
-## High-Level Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Client Layer                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
-│  │  Web UI      │  │  CLI Tool    │  │  GitHub App / API    │  │
-│  │  (Next.js)   │  │  (Python)    │  │  (FastAPI Webhooks)  │  │
-│  └──────┬───────┘  └──────┬───────┘  └──────────┬───────────┘  │
-└─────────┼────────────────┼────────────────────┼──────────────┘
-          │                │                    │
-          └────────────────┴────────────────────┘
-                             │
-┌────────────────────────────┴──────────────────────────────────┐
-│                      API Gateway (Kong/Traefik)                │
-└────────────────────────────┬──────────────────────────────────┘
-                             │
-        ┌────────────────────┼────────────────────┐
-        │                    │                    │
-┌───────┴────────┐  ┌────────┴────────┐  ┌───────┴────────┐
-│  AI Agent      │  │  CAD Engine     │  │  DevOps        │
-│  Service       │  │  Service        │  │  Controller    │
-│  (CrewAI)      │  │  (ezdxf)        │  │  (Terraform)   │
-└───────┬────────┘  └────────┬────────┘  └───────┬────────┘
-        │                    │                    │
-        └────────────────────┼────────────────────┘
-                             │
-┌────────────────────────────┴──────────────────────────────────┐
-│                   Message Bus (Redis Streams / NATS)           │
-└───────────────────────────────────────────────────────────────┘
-                             │
-        ┌────────────────────┼────────────────────┐
-        │                    │                    │
-┌───────┴────────┐  ┌────────┴────────┐  ┌───────┴────────┐
-│  PostgreSQL    │  │  ClickHouse     │  │  Object Store  │
-│  (Metadata)    │  │  (Metrics)      │  │  (S3/MinIO)    │
-└────────────────┘  └─────────────────┘  └────────────────┘
+```text
+Git repository
+│
+├── Governance (.arx4)
+├── GitHub automation (.github)
+├── Documentation (docs)
+├── Verification tooling (scripts)
+└── Configuration template (.env.example)
 ```
 
-## Package Interactions
+The current CI boundary is intentionally limited to repository integrity and shell verification.
 
-### CAD Automation (`packages/cad-automation`)
+## 2. Target architecture
 
-- Receives JSON floor plan definitions via REST API
-- Generates DXF files using `ezdxf`
-- Stores output in S3-compatible object store
-- Emits events: `cad.job.completed`, `cad.job.failed`
-
-### AI Agents (`packages/ai-agents`)
-
-- Listens to GitHub webhooks (`pull_request.opened`, `issue.created`)
-- Uses CrewAI to orchestrate review agents
-- Posts comments back to GitHub via GitHub App API
-- Emits events: `agent.review.completed`, `agent.issue.escalated`
-
-### Web Dashboard (`packages/web-dashboard`)
-
-- Next.js 14 app with server components
-- Real-time updates via Server-Sent Events
-- Displays:
-  - CI/CD pipeline status
-  - AI agent activity feed
-  - CAD job queue status
-  - Infrastructure health
-
-### DevOps Tools (`packages/devops-tools`)
-
-- Terraform modules for AWS/GCP/Azure
-- Kubernetes manifests with Helm charts
-- Docker multi-stage builds
-- Prometheus + Grafana monitoring stack
-
-## Data Flow
-
-### PR Review Flow
-
-```
-GitHub PR opened
-    ↓
-Webhook → AI Agent Service
-    ↓
-CrewAI analyzes code (AST + LLM)
-    ↓
-Quality score computed
-    ↓
-GitHub comment posted
-    ↓
-Event logged to ClickHouse
-    ↓
-Dashboard SSE update
+```text
+                       ┌─────────────────────────┐
+                       │ Client / CLI / GitHub   │
+                       │ App / Dashboard         │
+                       └────────────┬────────────┘
+                                    │
+                                    ▼
+                       ┌─────────────────────────┐
+                       │ API / Webhook Gateway    │
+                       │ auth + schema validation│
+                       └────────────┬────────────┘
+                                    │
+              ┌─────────────────────┼─────────────────────┐
+              ▼                     ▼                     ▼
+      ┌───────────────┐     ┌───────────────┐     ┌───────────────┐
+      │ AI Agent Plane│     │ CAD Plane     │     │ DevOps Plane  │
+      │ review/agent  │     │ DXF generation│     │ IaC/control   │
+      └───────┬───────┘     └───────┬───────┘     └───────┬───────┘
+              └─────────────────────┼─────────────────────┘
+                                    ▼
+                       ┌─────────────────────────┐
+                       │ Durable Event / Job Bus │
+                       │ Redis Streams / NATS    │
+                       └────────────┬────────────┘
+                                    │
+                 ┌──────────────────┼──────────────────┐
+                 ▼                  ▼                  ▼
+          ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+          │ PostgreSQL  │    │ Analytics   │    │ Object Store│
+          │ metadata    │    │ metrics     │    │ artifacts   │
+          └─────────────┘    └─────────────┘    └─────────────┘
+                                    │
+                                    ▼
+                       ┌─────────────────────────┐
+                       │ Observability / Ledger  │
+                       │ traces + audit + SLOs   │
+                       └─────────────────────────┘
 ```
 
-### CAD Generation Flow
+## 3. Control-plane contracts
 
+Every executable action should carry:
+
+```text
+request_id
+actor
+intent
+scope
+risk_class
+policy_decision
+evidence_refs
+idempotency_key
+created_at
 ```
-Client POST /cad/generate {json_plan}
-    ↓
-CAD Engine validates schema
-    ↓
-ezdxf generates DXF
-    ↓
-Upload to S3
-    ↓
-Return download URL
-    ↓
-Event: cad.job.completed
+
+High-impact actions require explicit policy approval. Audit records should be append-only/tamper-evident.
+
+## 4. Event contract
+
+Example event envelope:
+
+```json
+{
+  "event_id": "evt_<uuid>",
+  "event_type": "agent.review.completed",
+  "schema_version": 1,
+  "occurred_at": "<RFC3339 timestamp>",
+  "producer": "<service>",
+  "request_id": "req_<id>",
+  "payload": {}
+}
 ```
 
-## Technology Decisions
+Consumers must reject unsupported schema versions rather than silently guessing.
 
-| Decision | Rationale |
-|----------|-----------|
-| Python for AI/CAD | Rich ecosystem (ezdxf, CrewAI, FastAPI) |
-| TypeScript for UI | Type safety, Next.js ecosystem |
-| Monorepo structure | Shared tooling, atomic changes, easier CI |
-| GitHub Actions | Native integration, matrix builds |
-| Redis Streams | Simple, persistent event bus |
-| ClickHouse | Fast analytics on time-series data |
+## 5. Package restoration blueprint
 
-## Security Model
+When implementation packages return, use this separation:
 
-- All services run in isolated containers
-- Secrets managed via GitHub Secrets + external vault
-- GitHub App uses least-privilege permissions
-- CodeQL + TruffleHog in CI pipeline
-- Dependabot auto-updates enabled
+```text
+packages/
+├── ai-agents/
+│   ├── source/
+│   ├── tests/
+│   └── README.md
+├── cad-automation/
+│   ├── source/
+│   ├── tests/
+│   └── README.md
+├── web-dashboard/
+│   ├── source/
+│   ├── tests/
+│   └── README.md
+└── devops-tools/
+    ├── infrastructure/
+    ├── tests/
+    └── README.md
+```
 
-## Scaling Considerations
+No package should be represented in CI until its source and dependency contract exists.
 
-- CAD jobs: Queue-based async processing (Celery/RQ)
-- AI agents: Rate-limited LLM calls with caching
-- Dashboard: Static generation + ISR for performance
-- Database: Read replicas for analytics queries
+## 6. Verification ladder
+
+```text
+G0  identity / repository tree
+ ↓
+G1  shell syntax
+ ↓
+G2  structural contract
+ ↓
+G3  documentation consistency
+ ↓
+G4  security checks
+ ↓
+G5  package unit tests       (when packages exist)
+ ↓
+G6  integration tests        (when services exist)
+ ↓
+G7  deployment verification  (when deployment exists)
+```
+
+A higher-level claim cannot be marked `VALIDATED` when its lower-level evidence is missing.
+
+## 7. Non-functional requirements
+
+- **Security:** least privilege, no committed secrets, explicit approval for high-risk actions.
+- **Reliability:** idempotent jobs, bounded retries, explicit failure states.
+- **Observability:** structured logs, metrics, traces, correlation IDs.
+- **Change safety:** isolated branches, small commits, deterministic CI.
+- **Performance:** record baseline and post-change measurements before claiming improvement.
+
+## 8. Source of truth
+
+The repository's observed tree is authoritative for implementation claims. This document is authoritative only for the intended architecture and contracts until corresponding implementation evidence exists.
