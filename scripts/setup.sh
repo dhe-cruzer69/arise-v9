@@ -1,33 +1,38 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "🚀 Arise GenOps v9-Core — Development Setup"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
 
-# Check prerequisites
-command -v python3 >/dev/null 2>&1 || { echo "❌ python3 is required"; exit 1; }
-command -v node >/dev/null 2>&1 || { echo "❌ node is required"; exit 1; }
-command -v docker >/dev/null 2>&1 || { echo "⚠️ docker not found — containers will not work"; }
+echo "🚀 ARIEX4OPS — repository setup"
 
-# Setup Python packages
-echo "📦 Installing Python packages..."
-cd packages/cad-automation
-pip install -e ".[dev]" 2>/dev/null || pip3 install -e ".[dev]"
-cd ../ai-agents
-pip install -e ".[dev]" 2>/dev/null || pip3 install -e ".[dev]"
+command -v bash >/dev/null 2>&1 || { echo "❌ bash is required"; exit 1; }
 
-# Setup Node packages
-echo "📦 Installing Node packages..."
-cd ../web-dashboard
-npm install
+if command -v git >/dev/null 2>&1; then
+  echo "→ Git: $(git --version)"
+else
+  echo "❌ git is required"
+  exit 1
+fi
 
-# Return to root
-cd ../..
+if [[ -f .env.example && ! -f .env ]]; then
+  echo "→ No .env found. Copy .env.example to .env when local configuration is required."
+fi
+
+if [[ -d packages ]]; then
+  echo "→ packages/ detected. Application dependencies are intentionally not installed by this baseline script."
+  echo "  Add package manifests and explicit install commands before enabling package bootstrap."
+else
+  echo "→ No packages/ directory detected; skipping application dependency installation."
+fi
+
+echo "→ Running repository verification"
+./scripts/verify-repo.sh
 
 echo ""
-echo "✅ Setup complete!"
+echo "✅ Setup checks complete"
 echo ""
 echo "Next steps:"
 echo "  1. cp .env.example .env"
-echo "  2. Fill in your API keys and secrets"
-echo "  3. cd packages/web-dashboard && npm run dev"
-echo "  4. docker-compose -f packages/devops-tools/docker/docker-compose.yml up"
+echo "  2. Fill only local, non-committed values"
+echo "  3. Run ./scripts/lint.sh"
