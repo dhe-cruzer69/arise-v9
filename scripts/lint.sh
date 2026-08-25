@@ -7,7 +7,7 @@ cd "$ROOT"
 echo "🔍 ARIEX4OPS quality gate"
 
 # Structural + shell validation is the canonical gate for the current repository.
-./scripts/verify-repo.sh
+bash scripts/verify-repo.sh
 
 # If application packages are restored later, opt into package-specific checks
 # instead of silently swallowing failures.
