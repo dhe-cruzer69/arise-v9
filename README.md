@@ -1,245 +1,165 @@
-# Arise GenOps | v9-Core 🚀
+# Arise GenOps / ARIEX4OPS — `arise-v9`
 
-> **Principal DevOps Architect & AI Automation Engineer**
-> Building AI-powered automation, developer platforms, and open-source engineering tools.
+> **Governed engineering baseline for the ARIEX ecosystem.**
 
-[![CI/CD](https://github.com/abhiachar126-s/v9-core/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/abhiachar126-s/v9-core/actions/workflows/ci-cd.yml)
-[![Security Scan](https://github.com/abhiachar126-s/v9-core/actions/workflows/security-scan.yml/badge.svg)](https://github.com/abhiachar126-s/v9-core/actions/workflows/security-scan.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
-[![Node 20+](https://img.shields.io/badge/node-20%2B-green)](https://nodejs.org/)
+This repository is currently the **governance, documentation, configuration-template, and verification baseline** for Arise GenOps. It does not currently contain the application packages described by the original v9-Core documentation.
 
----
+## Current state — OBSERVED
 
-## 🎯 Vision
+The current Git tree contains:
 
-**v9-Core** is the foundational monorepo for the Arise GenOps ecosystem — a modular, AI-native platform that unifies:
+- `.arx4/contract.md` — engineering/evidence contract
+- `.github/` — issue templates and CI
+- `docs/` — architecture and control documentation
+- `scripts/` — setup, lint, and repository verification
+- `.env.example` — non-secret configuration template
+- standard repository governance files
 
-- 📐 **CAD Automation** — Programmatic 2D/3D drafting engines
-- 🤖 **AI Agents** — Self-healing coding assistants & PR reviewers  
-- 📊 **Web Dashboard** — Real-time project metrics & observability
-- ⚙️ **DevOps Tools** — Infrastructure-as-code, Docker, Kubernetes configs
+The historical `packages/cad-automation`, `packages/ai-agents`, `packages/web-dashboard`, and `packages/devops-tools` trees are **not present in the current repository**. CI therefore does not pretend to build or test them.
 
----
+## Engineering contract
 
-## 🏷️ Tech Stack
-
-| Layer | Technologies |
-|-------|-------------|
-| **Core** | Python 3.11+, Rust, TypeScript 5+ |
-| **AI/ML** | Blink AI, CrewAI, LangChain, LLM Orchestration |
-| **CAD** | ezdxf, AutoCAD API, DXF Generation |
-| **Frontend** | Next.js 14, React 18, Tailwind CSS, shadcn/ui |
-| **DevOps** | Docker, Kubernetes, Terraform, GitHub Actions |
-| **Data** | PostgreSQL, Redis, ClickHouse |
-
----
-
-## 📂 Monorepo Structure
+The repository follows the ARX4 evidence model:
 
 ```text
-v9-core/
-├── .github/
-│   ├── workflows/
-│   │   ├── ci-cd.yml           # Unified CI/CD pipeline
-│   │   └── security-scan.yml   # SAST, SCA, secret scanning
-│   └── ISSUE_TEMPLATE/
-│       ├── bug_report.yml
-│       └── feature_request.yml
-├── packages/
-│   ├── cad-automation/       # 2D/3D CAD engine (Python)
-│   ├── ai-agents/            # AI coding agents (Python)
-│   ├── web-dashboard/        # Next.js analytics UI (TypeScript)
-│   └── devops-tools/         # IaC & container configs
-├── docs/
-│   └── architecture.md       # System architecture docs
-├── scripts/
-│   ├── setup.sh              # One-command dev setup
-│   └── lint.sh               # Cross-package linting
-├── README.md
-├── LICENSE
-├── .gitignore
-└── .env.example
+OBSERVED → CORRELATED → HYPOTHESIS → VALIDATED → UNKNOWN
 ```
 
----
+Core rules include:
 
-## 🚀 Quick Start
+1. Preserve working functionality.
+2. Prefer minimal, testable changes.
+3. Never commit secrets.
+4. Never delete tests to make CI green.
+5. Never claim success without evidence.
+6. Keep repair attempts bounded.
+7. Treat security and correctness as merge gates.
+
+See `.arx4/contract.md` for the canonical contract.
+
+## Repository blueprint
+
+```text
+arise-v9/
+├── .arx4/
+│   └── contract.md
+├── .github/
+│   ├── ISSUE_TEMPLATE/
+│   └── workflows/
+│       └── ci.yml
+├── docs/
+│   ├── ARIEX-CONTROL.md
+│   ├── architecture.md
+│   └── REPAIR-BLUEPRINT.md
+├── scripts/
+│   ├── setup.sh
+│   ├── lint.sh
+│   └── verify-repo.sh
+├── .env.example
+├── .gitignore
+├── LICENSE
+├── README.md
+└── SECURITY.md
+```
+
+## Quick start
 
 ### Prerequisites
 
-- Python 3.11+
-- Node.js 20+
-- Docker & Docker Compose
 - Git
+- Bash
 
-### Clone & Setup
+Optional application dependencies should only be introduced when their source packages are actually restored.
 
-```bash
-# Clone the monorepo
-git clone https://github.com/abhiachar126-s/v9-core.git
-cd v9-core
-
-# One-command setup (installs all dependencies)
-./scripts/setup.sh
-
-# Or manual setup
-# Python packages
-cd packages/cad-automation && pip install -e .
-cd ../ai-agents && pip install -e .
-
-# Node packages  
-cd ../web-dashboard && npm install
-
-# Start everything with Docker
-docker-compose up --build
-```
-
----
-
-## 📁 Packages
-
-### `packages/cad-automation` — CAD Automation Engine
-
-Programmatic 2D/3D drafting engine powered by `ezdxf` and AutoCAD APIs.
+### Verify the repository
 
 ```bash
-cd packages/cad-automation
-python src/dxf_gen.py --config floor_plan.json --output plan.dxf
-```
-
-**Features:**
-- JSON-to-DXF floor plan generation
-- Layer management & block definitions
-- Batch processing & template inheritance
-- Error handling & validation
-
-[Read more →](packages/cad-automation/README.md)
-
----
-
-### `packages/ai-agents` — AI Coding Agents
-
-Self-healing coding assistants that review PRs, detect issues, and suggest fixes.
-
-```bash
-cd packages/ai-agents
-python agents/reviewer.py --repo owner/repo --pr 42
-```
-
-**Features:**
-- Automated PR review & quality gates
-- Code smell detection
-- Security vulnerability scanning
-- Automated comment posting
-
-[Read more →](packages/ai-agents/README.md)
-
----
-
-### `packages/web-dashboard` — Real-Time Dashboard
-
-Next.js 14 analytics dashboard for monitoring project health, CI/CD metrics, and AI agent performance.
-
-```bash
-cd packages/web-dashboard
-npm run dev
-```
-
-**Features:**
-- Dark-mode UI with Tailwind CSS
-- Real-time metrics visualization
-- Repository health monitoring
-- AI agent performance tracking
-
-[Read more →](packages/web-dashboard/README.md)
-
----
-
-### `packages/devops-tools` — Infrastructure & DevOps
-
-Docker, Kubernetes, and Terraform configurations for production deployment.
-
-```bash
-cd packages/devops-tools
-terraform init && terraform plan
-docker-compose -f docker/docker-compose.yml up
-```
-
-**Features:**
-- Multi-stage Docker builds
-- Kubernetes manifests with Helm
-- Terraform modules for AWS/GCP/Azure
-- Monitoring stack (Prometheus + Grafana)
-
-[Read more →](packages/devops-tools/README.md)
-
----
-
-## 🌐 Architecture
-
-```
-┌─────────────────────────────────────────────────────┐
-│                    Arise GenOps Platform                    │
-└─────────────────────────────────────────────────────┘
-                                │
-        ┌────────────────┼────────────────┼───────────────┐
-        │                    │                    │                │
-   ┌─────┴─────┐      ┌─────┴─────┐      ┌─────┴─────┐    ┌──┴──┐
-   │  CAD Engine   │      │  AI Agents   │      │  Dashboard   │    │ IaC │
-   │  (ezdxf)     │      │  (CrewAI)    │      │  (Next.js)   │    │(TF) │
-   └────────────┘      └────────────┘      └────────────┘    └────┘
-```
-
-See [docs/architecture.md](docs/architecture.md) for detailed system design.
-
----
-
-## 🛠️ Development
-
-### Branch Strategy
-
-- `main` — Production-ready, protected
-- `develop` — Integration branch
-- `feature/*` — Feature development
-- `fix/*` — Bug fixes
-
-### Commit Convention
-
-We use [Conventional Commits](https://www.conventionalcommits.org/):
-
-```
-feat: add new DXF layer manager
-fix: resolve memory leak in batch processor
-docs: update architecture diagram
-test: add integration tests for ai-agents
-```
-
-### Code Quality
-
-All code is linted, type-checked, and tested before merge:
-
-```bash
-# Run across all packages
+./scripts/verify-repo.sh
 ./scripts/lint.sh
-
-# Or per package
-cd packages/cad-automation && ruff check . && mypy src/
-cd packages/web-dashboard && npm run lint && npm run type-check
 ```
 
+### Local setup
+
+```bash
+./scripts/setup.sh
+cp .env.example .env
+```
+
+Put real credentials only in the local `.env` or an approved secret manager. Never commit them.
+
+## CI
+
+GitHub Actions runs a deterministic repository gate on pushes and pull requests to `main`:
+
+```text
+checkout
+   ↓
+shell syntax validation
+   ↓
+repository verification
+   ↓
+quality gate
+```
+
+The workflow is intentionally small because there is no application package tree to test yet.
+
+## Target-state application blueprint
+
+When the application layer is restored, the intended architecture can grow into:
+
+```text
+Client / CLI / GitHub App
+          │
+          ▼
+      API Gateway
+          │
+   ┌──────┼────────┐
+   ▼      ▼        ▼
+ AI      CAD     DevOps
+Agents  Engine   Control
+   │      │        │
+   └──────┼────────┘
+          ▼
+ Redis Streams / Event Bus
+          │
+   ┌──────┼───────────┐
+   ▼      ▼           ▼
+Postgres Analytics Object Store
+          │
+          ▼
+ Observability / Dashboard
+```
+
+This is **target-state architecture**, not a claim that these services currently exist in this repository.
+
+## Future package contract
+
+Each restored package should be independently testable:
+
+```text
+packages/<package>/
+├── README.md
+├── source/
+├── tests/
+└── dependency manifest
+```
+
+CI should add explicit package jobs only after the corresponding source and dependency manifests exist.
+
+## Repair documentation
+
+See [`docs/REPAIR-BLUEPRINT.md`](docs/REPAIR-BLUEPRINT.md) for the detailed X-repair inventory, gates, acceptance criteria, and restoration blueprint.
+
+## Security
+
+See `SECURITY.md`. Report vulnerabilities through the repository's documented security process rather than committing secrets or exploit material.
+
+## License
+
+MIT — see `LICENSE`.
+
 ---
 
-## 📜 License
+**Repository:** `dhe-cruzer69/arise-v9`
 
-[MIT License](LICENSE) © 2026 Abhishek | Arise GenOps
-
----
-
-## 🗣️ Connect
-
-- 📋 [Issues](https://github.com/abhiachar126-s/v9-core/issues)
-- 🚀 [Discussions](https://github.com/abhiachar126-s/v9-core/discussions)
-- 📋 [Projects](https://github.com/abhiachar126-s/v9-core/projects)
-
-> *"Automate the repetitive. Engineer the future."* — Arise GenOps
+**Operating principle:** *Evidence first. Minimal repair. Deterministic verification.*
