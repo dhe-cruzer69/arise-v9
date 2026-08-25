@@ -13,10 +13,6 @@ require_file() {
   [[ -f "$1" ]] || fail "Required file missing: $1"
 }
 
-require_dir() {
-  [[ -d "$1" ]] || fail "Required directory missing: $1"
-}
-
 echo "🔎 ARIEX4OPS repository verification"
 echo "   root: $ROOT"
 
@@ -47,8 +43,9 @@ for script in scripts/*.sh; do
   bash -n "$script" || fail "Shell syntax error: $script"
 done
 
-if grep -RIn '|| true' scripts .github/workflows --include='*.sh' --include='*.yml' --include='*.yaml' >/dev/null 2>&1; then
-  fail "Non-failing quality gate detected: remove '|| true' from scripts/CI"
+if grep -RInF '|| true' scripts .github/workflows \
+  --include='*.sh' --include='*.yml' --include='*.yaml' --exclude='verify-repo.sh' >/dev/null 2>&1; then
+  fail "Non-failing quality gate detected; remove the suppression from scripts/CI"
 fi
 
 echo "→ Current-state consistency"
