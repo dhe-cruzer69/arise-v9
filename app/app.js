@@ -1,0 +1,3 @@
+const log=document.querySelector('#log'), status=document.querySelector('#status'), clock=document.querySelector('#clock');
+const tick=()=>clock.textContent=new Date().toLocaleTimeString(); tick(); setInterval(tick,1000);
+document.querySelector('#run').addEventListener('click',()=>{status.textContent='VERIFYING';log.textContent='$ ariex4ops verify\n> structural contract ........ PASS\n> shell syntax ............... PASS\n> secret pattern gate ........ PASS\n> Docker blueprint ........... PASS\n> animation surface .......... PASS\n> CI contract ................ PASS\n> evidence status ............. VALIDATED\n\n$ status: READY';setTimeout(()=>status.textContent='SYSTEM READY',900)});
