@@ -1,29 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "🔍 Running cross-package lint..."
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
 
-# Python
-echo "→ Linting cad-automation..."
-cd packages/cad-automation
-ruff check src/ || true
-ruff format --check src/ || true
-mypy src/ || true
-cd ../..
+echo "🔍 ARIEX4OPS quality gate"
 
-echo "→ Linting ai-agents..."
-cd packages/ai-agents
-ruff check agents/ || true
-ruff format --check agents/ || true
-mypy agents/ || true
-cd ../..
+# Structural + shell validation is the canonical gate for the current repository.
+./scripts/verify-repo.sh
 
-# TypeScript
-echo "→ Linting web-dashboard..."
-cd packages/web-dashboard
-npm run lint || true
-npm run type-check || true
-cd ../..
+# If application packages are restored later, opt into package-specific checks
+# instead of silently swallowing failures.
+if [[ -d packages ]]; then
+  echo "📦 packages/ detected — package-specific linting must be declared by CI before merge."
+fi
 
-echo ""
-echo "✅ Lint complete!"
+echo "✅ Quality gate complete"
