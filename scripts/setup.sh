@@ -27,7 +27,7 @@ else
 fi
 
 echo "→ Running repository verification"
-./scripts/verify-repo.sh
+bash scripts/verify-repo.sh
 
 echo ""
 echo "✅ Setup checks complete"
@@ -35,4 +35,4 @@ echo ""
 echo "Next steps:"
 echo "  1. cp .env.example .env"
 echo "  2. Fill only local, non-committed values"
-echo "  3. Run ./scripts/lint.sh"
+echo "  3. bash scripts/lint.sh"
