@@ -1,0 +1,7 @@
+name = "arise-v9-hello"
+main = "index.js"
+compatibility_date = "2026-08-26"
+
+[vars]
+ENVIRONMENT = "production"
+VERSION = "1.0.0"
