@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="ARIEX4OPS governed engineering control dashboard">
+<title>ARIEX4OPS Control</title><link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="grid"></div><main>
+<header><div><span class="eyebrow">ARIEX4OPS / X4</span><h1>Engineering Control</h1><p>Governed repository baseline · deterministic verification · Docker-ready dashboard</p></div><div class="status"><i></i><span id="status">SYSTEM READY</span></div></header>
+<section class="hero"><div class="orb"><span>Ω</span></div><div><h2>Observe → Plan → Execute → Verify</h2><p>Interactive control surface for the repository blueprint. Animations are presentation-only; execution remains governed by CI and explicit evidence.</p><button id="run">RUN LOCAL CHECK</button></div></section>
+<section class="cards"><article><b>01</b><h3>Scout</h3><p>Tree, workflows, contracts and drift.</p></article><article><b>02</b><h3>Build</h3><p>Docker image and deterministic assets.</p></article><article><b>03</b><h3>Verify</h3><p>Shell, structure, security and CI gates.</p></article><article><b>04</b><h3>Deploy</h3><p>Container runtime with health checks.</p></article></section>
+<section class="terminal"><div class="termhead"><span>LIVE EVIDENCE</span><span id="clock">--:--:--</span></div><pre id="log">$ ariex4ops verify
+> waiting for operator action
+</pre></section>
+</main><script src="app.js"></script>
+</body></html>

@@ -13,6 +13,10 @@ require_file() {
   [[ -f "$1" ]] || fail "Required file missing: $1"
 }
 
+require_dir() {
+  [[ -d "$1" ]] || fail "Required directory missing: $1"
+}
+
 echo "🏗️ ARIEX4OPS repository verification"
 echo "   root: $ROOT"
 
@@ -28,11 +32,24 @@ echo "→ Documentation"
 require_file "README.md"
 require_file "docs/architecture.md"
 require_file "docs/REPAIR-BLUEPRINT.md"
+require_file "docs/DEPLOYMENT-BLUEPRINT.md"
 
 echo "→ Tooling"
 require_file "scripts/setup.sh"
 require_file "scripts/lint.sh"
 require_file "scripts/verify-repo.sh"
+
+echo "→ Docker blueprint"
+require_file "Dockerfile"
+require_file "docker-compose.yml"
+require_file "nginx.conf"
+require_file ".dockerignore"
+require_file "app/index.html"
+require_file "app/styles.css"
+require_file "app/app.js"
+require_dir "app"
+require_dir "plugins"
+require_file "plugins/README.md"
 
 echo "→ Secret scanning"
 if grep -RInE '(^|[^A-Za-z0-9_])(sk-[A-Za-z0-9_-]{8,}|sk-ant-[A-Za-z0-9_-]{8,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----)' . \
@@ -58,12 +75,11 @@ echo "→ Current-state consistency"
 if [[ -d packages ]]; then
   echo "   packages/ exists; package-specific validation must be declared before claiming full application CI."
 else
-  echo "   packages/ absent; repository is treated as governance/tooling/docs baseline."
+  echo "   packages/ absent; repository is treated as governance/tooling/docs + Docker dashboard baseline."
 fi
 
 echo "→ Cloudflare structure"
 if [[ -d workers ]]; then
-  # Require a real regular file, not a directory or dangling symlink.
   find workers -type f -name wrangler.toml -print -quit | grep -q . || fail "workers/ exists but no wrangler.toml was found"
 fi
 if [[ -d pages ]]; then
