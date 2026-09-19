@@ -63,7 +63,8 @@ fi
 
 echo "→ Cloudflare structure"
 if [[ -d workers ]]; then
-  find workers -name wrangler.toml -print -quit | grep -q . || fail "workers/ exists but no wrangler.toml was found"
+  # Require a real regular file, not a directory or dangling symlink.
+  find workers -type f -name wrangler.toml -print -quit | grep -q . || fail "workers/ exists but no wrangler.toml was found"
 fi
 if [[ -d pages ]]; then
   [[ -f pages/index.html ]] || fail "pages/ exists but pages/index.html is missing"
