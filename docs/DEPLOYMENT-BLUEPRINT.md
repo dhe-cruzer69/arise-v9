@@ -1,67 +1,33 @@
-# X4 Deployment Blueprint
+# Deployment Blueprint
 
-## Runtime
+## Overview
 
-The current application surface is a static control dashboard served by nginx and packaged as an immutable Docker image.
+Static control dashboard served by nginx inside a minimal Docker image.
 
-```text
-GitHub push / PR
-      ↓
-GitHub Actions
-      ├── shell + repository gates
-      ├── Docker build
-      └── container smoke test
-      ↓
-Image artifact
-      ↓
-Approved deployment target
-      ↓
-HTTP :80 + /health
-```
-
-## Local
+## Local run
 
 ```bash
 docker compose up --build
 # open http://localhost:8080
 ```
 
-## CI gates
+## Security baseline (docker-compose runtime)
 
-1. Validate shell syntax.
-2. Run `scripts/verify-repo.sh`.
-3. Build the Docker image.
-4. Start the container.
-5. Poll `/health`.
-6. Stop and remove the container.
-
-## Security baseline
+These hardening flags are applied by `docker-compose.yml` and by the CI smoke-test container:
 
 - No secrets in source.
-- Read-only container filesystem.
-- Drop Linux capabilities.
+- Read-only container filesystem (`--read-only`).
+- Dropped Linux capabilities (`--cap-drop=ALL`).
 - `no-new-privileges`.
-- Security headers from nginx.
-- Explicit health endpoint.
 
-## Animation contract
+Running the image with a plain `docker run` without these flags is possible but is **not** the documented security baseline. Operators who need the baseline should use `docker compose` or pass the same flags explicitly.
 
-UI animation is limited to presentation and must never imply that an external action executed. Execution state must come from verified backend/CI evidence when a real control plane is introduced.
+## Health endpoint
 
-## Expansion blueprint
+`GET /health` returns `200 ok` and carries the same security headers as every other response.
 
-```text
-Dashboard
-   ↓
-API Gateway
-   ↓
-Policy Gate → Audit Ledger → Queue
-   ↓
-Adapters: GitHub / Docker / AI / Cloud
-   ↓
-Workers
-   ↓
-Evidence + Observability
-```
+## Production notes
 
-The repository must not claim production deployment until an actual deployment target and successful health evidence exist.
+- Provide secrets only via environment or a secrets manager.
+- Prefer the compose definition or an equivalent hardened runtime.
+- The UI is presentation-only; it does not execute external actions.

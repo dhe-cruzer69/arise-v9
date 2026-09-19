@@ -27,7 +27,7 @@ jobs:
       - name: Shell syntax
         run: bash -n scripts/*.sh
       - name: Repository quality gate
-        run: ./scripts/lint.sh
+        run: bash scripts/lint.sh
 
   docker:
     name: Docker build and smoke test
@@ -39,8 +39,14 @@ jobs:
         uses: actions/checkout@v4
       - name: Build image
         run: docker build --pull -t ariex4ops-dashboard:${{ github.sha }} .
-      - name: Run container
-        run: docker run -d --name ariex4ops-dashboard -p 8080:80 ariex4ops-dashboard:${{ github.sha }}
+      - name: Run container (hardened flags matching docker-compose baseline)
+        run: >
+          docker run -d --name ariex4ops-dashboard
+          --read-only
+          --cap-drop=ALL
+          --security-opt no-new-privileges:true
+          -p 8080:80
+          ariex4ops-dashboard:${{ github.sha }}
       - name: Health check
         run: |
           for i in {1..20}; do
