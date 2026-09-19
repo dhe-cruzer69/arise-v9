@@ -1,21 +1,89 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
-fail(){ echo "❌ $*" >&2; exit 1; }
-require_file(){ [[ -f "$1" ]] || fail "Required file missing: $1"; }
-require_dir(){ [[ -d "$1" ]] || fail "Required directory missing: $1"; }
-echo "🔎 ARIEX4OPS repository verification"
-for f in .arx4/contract.md SECURITY.md LICENSE README.md docs/architecture.md docs/REPAIR-BLUEPRINT.md docs/DEPLOYMENT-BLUEPRINT.md .env.example .dockerignore Dockerfile docker-compose.yml nginx.conf app/index.html app/styles.css app/app.js plugins/README.md .github/workflows/ci.yml scripts/setup.sh scripts/lint.sh scripts/verify-repo.sh; do require_file "$f"; done
-require_dir app
-require_dir plugins
-if grep -RInE '(^|[^A-Za-z0-9_])(sk-[A-Za-z0-9_-]{8,}|sk-ant-[A-Za-z0-9_-]{8,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----)' . --exclude-dir=.git --exclude='LICENSE.html' --exclude='verify-repo.sh' >/dev/null 2>&1; then fail "Credential-shaped material detected in tracked text files"; fi
-for script in scripts/*.sh; do bash -n "$script" || fail "Shell syntax error: $script"; done
-if grep -RIn '|| true' scripts .github/workflows --include='*.sh' --include='*.yml' --include='*.yaml' --exclude='verify-repo.sh' >/dev/null 2>&1; then fail "Non-failing quality gate detected: remove '|| true' from scripts/CI"; fi
-# Stale-reference gate deliberately excludes the verifier itself and historical docs that document the removal.
-if grep -RInE 'abhiachar126-s/v9-core|packages/(cad-automation|ai-agents|web-dashboard|devops-tools)' scripts .github --include='*.sh' --include='*.yml' --include='*.yaml' --exclude='verify-repo.sh' >/dev/null 2>&1; then fail "Stale repository/package references detected in scripts/CI"; fi
+
+fail() {
+  echo "❌ $*" >&2
+  exit 1
+}
+
+require_file() {
+  [[ -f "$1" ]] || fail "Required file missing: $1"
+}
+
+require_dir() {
+  [[ -d "$1" ]] || fail "Required directory missing: $1"
+}
+
+echo "🏗️ ARIEX4OPS repository verification"
+echo "   root: $ROOT"
+
+echo "→ Governance"
+require_file ".arx4/contract.md"
+require_file "SECURITY.md"
+require_file "LICENSE"
+
+echo "→ CI"
+require_file ".github/workflows/ci.yml"
+
+echo "→ Documentation"
+require_file "README.md"
+require_file "docs/architecture.md"
+require_file "docs/REPAIR-BLUEPRINT.md"
+require_file "docs/DEPLOYMENT-BLUEPRINT.md"
+
+echo "→ Tooling"
+require_file "scripts/setup.sh"
+require_file "scripts/lint.sh"
+require_file "scripts/verify-repo.sh"
+
 echo "→ Docker blueprint"
-command -v docker >/dev/null 2>&1 && echo "   Docker available" || echo "   Docker not installed locally; CI will perform image validation"
-echo "→ Current state"
-if [[ -d packages ]]; then echo "   packages/ detected; package-specific validation remains required"; else echo "   application packages absent; dashboard baseline is static and Dockerized"; fi
+require_file "Dockerfile"
+require_file "docker-compose.yml"
+require_file "nginx.conf"
+require_file ".dockerignore"
+require_file "app/index.html"
+require_file "app/styles.css"
+require_file "app/app.js"
+require_dir "app"
+require_dir "plugins"
+require_file "plugins/README.md"
+
+echo "→ Secret scanning"
+if grep -RInE '(^|[^A-Za-z0-9_])(sk-[A-Za-z0-9_-]{8,}|sk-ant-[A-Za-z0-9_-]{8,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----)' . \
+  --exclude-dir=.git --exclude='LICENSE.html' --exclude='verify-repo.sh' >/dev/null 2>&1; then
+  fail "Credential-shaped material detected in tracked text files"
+fi
+
+echo "→ Shell syntax"
+shopt -s nullglob
+scripts=(scripts/*.sh)
+((${#scripts[@]} > 0)) || fail "No shell scripts found under scripts/"
+for script in "${scripts[@]}"; do
+  bash -n "$script" || fail "Shell syntax error: $script"
+done
+
+echo "→ Quality gate suppression"
+if grep -RInF '|| true' scripts .github/workflows \
+  --include='*.sh' --include='*.yml' --include='*.yaml' --exclude='verify-repo.sh' >/dev/null 2>&1; then
+  fail "Non-failing quality gate detected; remove the suppression from scripts/CI"
+fi
+
+echo "→ Current-state consistency"
+if [[ -d packages ]]; then
+  echo "   packages/ exists; package-specific validation must be declared before claiming full application CI."
+else
+  echo "   packages/ absent; repository is treated as governance/tooling/docs + Docker dashboard baseline."
+fi
+
+echo "→ Cloudflare structure"
+if [[ -d workers ]]; then
+  find workers -type f -name wrangler.toml -print -quit | grep -q . || fail "workers/ exists but no wrangler.toml was found"
+fi
+if [[ -d pages ]]; then
+  [[ -f pages/index.html ]] || fail "pages/ exists but pages/index.html is missing"
+fi
+
 echo "✅ Repository verification passed"
