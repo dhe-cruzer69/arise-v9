@@ -2,59 +2,51 @@
 
 > **Governed engineering baseline for the ARIEX ecosystem.**
 
-This repository is currently the **governance, documentation, configuration-template, and verification baseline** for Arise GenOps. It does not currently contain the application packages described by the original v9-Core documentation.
-
 ## Current state — OBSERVED
 
-The current Git tree contains:
+This repository is the **governance, documentation, configuration-template,
+and verification baseline** for Arise GenOps. It does not currently contain the
+application packages described by the historical v9-Core documentation.
 
-- `.arx4/contract.md` — engineering/evidence contract
-- `.github/` — issue templates and CI
-- `docs/` — architecture and control documentation
-- `scripts/` — setup, lint, and repository verification
-- `.env.example` — non-secret configuration template
-- standard repository governance files
+The historical `packages/cad-automation`, `packages/ai-agents`,
+`packages/web-dashboard`, and `packages/devops-tools` trees are not present in
+the current repository. CI therefore must not pretend to build or test them.
 
-The historical `packages/cad-automation`, `packages/ai-agents`, `packages/web-dashboard`, and `packages/devops-tools` trees are **not present in the current repository**. CI therefore does not pretend to build or test them.
+## X4 alignment
 
-## Engineering contract
-
-The repository follows the ARX4 evidence model:
+The repository is aligned with the X4 deterministic-first evidence model:
 
 ```text
 OBSERVED → CORRELATED → HYPOTHESIS → VALIDATED → UNKNOWN
 ```
 
-Core rules include:
+Target X4 layers are implemented only when executable source and verification
+evidence exists.
 
-1. Preserve working functionality.
-2. Prefer minimal, testable changes.
-3. Never commit secrets.
-4. Never delete tests to make CI green.
-5. Never claim success without evidence.
-6. Keep repair attempts bounded.
-7. Treat security and correctness as merge gates.
+## Architecture blueprint
 
-See `.arx4/contract.md` for the canonical contract.
+```mermaid
+flowchart TD
+    A[Client / CLI / GitHub App] --> B[API Gateway]
+    B --> C[X4 Control Plane]
+    C --> D[Deterministic Workers]
+    C --> E[Optional AI Adapters]
+    D --> F[X4-EVAL]
+    E --> F
+    F -->|PASS| G[Verified Result]
+    F -->|FAIL| H[X4-REPAIR]
+    H --> C
+    G --> I[Observability / Evidence]
+```
 
 ## Repository blueprint
 
 ```text
 arise-v9/
 ├── .arx4/
-│   └── contract.md
 ├── .github/
-│   ├── ISSUE_TEMPLATE/
-│   └── workflows/
-│       └── ci.yml
 ├── docs/
-│   ├── ARIEX-CONTROL.md
-│   ├── architecture.md
-│   └── REPAIR-BLUEPRINT.md
 ├── scripts/
-│   ├── setup.sh
-│   ├── lint.sh
-│   └── verify-repo.sh
 ├── .env.example
 ├── .gitignore
 ├── LICENSE
@@ -62,34 +54,40 @@ arise-v9/
 └── SECURITY.md
 ```
 
-## Quick start
+## Completion gates
 
-### Prerequisites
-
-- Git
-- Bash
-
-Optional application dependencies should only be introduced when their source packages are actually restored.
-
-### Verify the repository
-
-```bash
-./scripts/verify-repo.sh
-./scripts/lint.sh
+```text
+Architecture
+  ↓
+Executable implementation
+  ↓
+Unit tests
+  ↓
+Integration tests
+  ↓
+Security / secret scan
+  ↓
+CI
+  ↓
+Deployment
+  ↓
+Live health check
+  ↓
+Evidence recorded
+  ↓
+VERIFIED
 ```
 
-### Local setup
+## Incomplete work — explicitly tracked
 
-```bash
-./scripts/setup.sh
-cp .env.example .env
-```
+- [ ] Restore application packages only when their source boundaries are defined.
+- [ ] Add executable vertical slices for restored packages.
+- [ ] Add package-level unit and integration tests.
+- [ ] Add security/secret scanning for application code.
+- [ ] Add deployment and live-health evidence when deployment is introduced.
+- [ ] Keep target-state diagrams separate from observed implementation.
 
-Put real credentials only in the local `.env` or an approved secret manager. Never commit them.
-
-## CI
-
-GitHub Actions runs a deterministic repository gate on pushes and pull requests to `main`:
+## Current CI model
 
 ```text
 checkout
@@ -101,65 +99,19 @@ repository verification
 quality gate
 ```
 
-The workflow is intentionally small because there is no application package tree to test yet.
+The workflow intentionally remains small while the application package tree is
+absent.
 
-## Target-state application blueprint
+## Security contract
 
-When the application layer is restored, the intended architecture can grow into:
+1. Never commit credentials.
+2. Never delete tests to make CI green.
+3. Never suppress a quality gate with `|| true`.
+4. Never claim deployment without evidence.
+5. Preserve unknown state until it is verified.
 
-```text
-Client / CLI / GitHub App
-          │
-          ▼
-      API Gateway
-          │
-   ┌──────┼────────┐
-   ▼      ▼        ▼
- AI      CAD     DevOps
-Agents  Engine   Control
-   │      │        │
-   └──────┼────────┘
-          ▼
- Redis Streams / Event Bus
-          │
-   ┌──────┼───────────┐
-   ▼      ▼           ▼
-Postgres Analytics Object Store
-          │
-          ▼
- Observability / Dashboard
-```
+## Evidence rule
 
-This is **target-state architecture**, not a claim that these services currently exist in this repository.
-
-## Future package contract
-
-Each restored package should be independently testable:
-
-```text
-packages/<package>/
-├── README.md
-├── source/
-├── tests/
-└── dependency manifest
-```
-
-CI should add explicit package jobs only after the corresponding source and dependency manifests exist.
-
-## Repair documentation
-
-See [`docs/REPAIR-BLUEPRINT.md`](docs/REPAIR-BLUEPRINT.md) for the detailed X-repair inventory, gates, acceptance criteria, and restoration blueprint.
-
-## Security
-
-See `SECURITY.md`. Report vulnerabilities through the repository's documented security process rather than committing secrets or exploit material.
-
-## License
-
-MIT — see `LICENSE`.
-
----
-
-**Repository:** `dhe-cruzer69/arise-v9`
-
-**Operating principle:** *Evidence first. Minimal repair. Deterministic verification.*
+**Blueprint ≠ implementation. Implementation ≠ verification.**
+A project becomes `VERIFIED` only after the relevant gates actually execute and
+produce reproducible evidence.
