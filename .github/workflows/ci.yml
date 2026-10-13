@@ -57,6 +57,9 @@ jobs:
         run: >
           docker run -d --name ariex4ops-dashboard
           --read-only
+          --tmpfs /var/cache/nginx:rw,nosuid,nodev,noexec,size=16m
+          --tmpfs /var/run:rw,nosuid,nodev,noexec,size=1m
+          --tmpfs /tmp:rw,nosuid,nodev,noexec,size=16m
           --cap-drop=ALL
           --security-opt no-new-privileges:true
           -p 8080:80
