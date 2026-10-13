@@ -121,8 +121,11 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         shell: bash
         run: |
-          if ! npx --yes wrangler@4 pages project list 2>/dev/null | grep -q 'arise-v9'; then
+          npx --yes wrangler@4 pages project list > /tmp/arise-v9-pages-projects.txt
+          if grep -Fq 'arise-v9' /tmp/arise-v9-pages-projects.txt; then
+            echo "Pages project arise-v9 already exists"
+          else
             echo "Creating Pages project arise-v9"
-            npx --yes wrangler@4 pages project create arise-v9 --production-branch=main || true
+            npx --yes wrangler@4 pages project create arise-v9 --production-branch=main
           fi
           npx --yes wrangler@4 pages deploy pages --project-name=arise-v9
