@@ -61,6 +61,10 @@ jobs:
           --tmpfs /var/run:rw,nosuid,nodev,noexec,size=1m
           --tmpfs /tmp:rw,nosuid,nodev,noexec,size=16m
           --cap-drop=ALL
+          --cap-add=CHOWN
+          --cap-add=SETUID
+          --cap-add=SETGID
+          --cap-add=NET_BIND_SERVICE
           --security-opt no-new-privileges:true
           -p 8080:80
           ariex4ops-dashboard:${{ github.sha }}
