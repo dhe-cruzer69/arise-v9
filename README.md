@@ -29,41 +29,7 @@ evidence exists.
 
 > Status: architecture documentation; implementation and deployment claims require independent verification.
 
-```mermaid
-stateDiagram-v2
-  [*] --> Scaffold
-  Scaffold --> LocalChecks: lint / unit / policy checks
-  LocalChecks --> Blocked: any required check fails
-  LocalChecks --> HostedCI: local checks pass
-  HostedCI --> Repair: workflow fails
-  Repair --> LocalChecks: patch + rerun
-  HostedCI --> EvidenceReview: workflow passes
-  EvidenceReview --> FrozenBaseline: evidence reviewed and recorded
-  EvidenceReview --> Blocked: evidence incomplete
-  Blocked --> [*]
-  FrozenBaseline --> [*]
-  note right of EvidenceReview
-    A green workflow is necessary
-    but not sufficient for release.
-    Deployment requires separate evidence.
-  end note
-```
 **Evidence note:** This is a governance lifecycle, not a claim that a particular commit or deployment has passed these states.
-
-
-```mermaid
-flowchart TD
-    A[Client / CLI / GitHub App] --> B[API Gateway]
-    B --> C[X4 Control Plane]
-    C --> D[Deterministic Workers]
-    C --> E[Optional AI Adapters]
-    D --> F[X4-EVAL]
-    E --> F
-    F -->|PASS| G[Verified Result]
-    F -->|FAIL| H[X4-REPAIR]
-    H --> C
-    G --> I[Observability / Evidence]
-```
 
 ## Repository blueprint
 
@@ -142,7 +108,6 @@ absent.
 A project becomes `VERIFIED` only after the relevant gates actually execute and
 produce reproducible evidence.
 
-
 ## Architecture — Mermaid scope map
 
 ```mermaid
@@ -154,3 +119,4 @@ flowchart LR
     FIX --> V
     APP[Application Packages Absent] -. not implemented .-> T
 ```
+
