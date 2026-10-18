@@ -115,3 +115,16 @@ absent.
 **Blueprint ≠ implementation. Implementation ≠ verification.**
 A project becomes `VERIFIED` only after the relevant gates actually execute and
 produce reproducible evidence.
+
+
+## Architecture — Mermaid scope map
+
+```mermaid
+flowchart LR
+    T[Governance Templates] --> V[Verification Scripts]
+    V --> CI[CI Checks]
+    CI -->|pass| EV[Record Evidence]
+    CI -->|fail| FIX[Reviewed Repair]
+    FIX --> V
+    APP[Application Packages Absent] -. not implemented .-> T
+```
