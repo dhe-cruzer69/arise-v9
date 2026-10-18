@@ -29,6 +29,21 @@ evidence exists.
 
 > Status: architecture documentation; implementation and deployment claims require independent verification.
 
+```mermaid
+stateDiagram-v2
+  [*] --> Scaffold
+  Scaffold --> LocalChecks: lint / unit / policy checks
+  LocalChecks --> Blocked: any required check fails
+  LocalChecks --> HostedCI: local checks pass
+  HostedCI --> Repair: workflow fails
+  Repair --> LocalChecks: patch + rerun
+  HostedCI --> EvidenceReview: workflow passes
+  EvidenceReview --> FrozenBaseline: evidence reviewed and recorded
+  EvidenceReview --> Blocked: evidence incomplete
+  Blocked --> [*]
+  FrozenBaseline --> [*]
+```
+
 **Evidence note:** This is a governance lifecycle, not a claim that a particular commit or deployment has passed these states.
 
 ## Repository blueprint
