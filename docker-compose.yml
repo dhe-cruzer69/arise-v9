@@ -7,9 +7,15 @@ services:
     restart: unless-stopped
     read_only: true
     tmpfs:
-      - /var/cache/nginx
-      - /var/run
+      - /var/cache/nginx:rw,nosuid,nodev,noexec,size=16m
+      - /var/run:rw,nosuid,nodev,noexec,size=1m
+      - /tmp:rw,nosuid,nodev,noexec,size=16m
     cap_drop:
       - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+      - NET_BIND_SERVICE
     security_opt:
       - no-new-privileges:true
